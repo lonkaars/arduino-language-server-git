@@ -1,37 +1,38 @@
 # Maitainer: Loek Le Blansch <loek@pipeframe.xyz>
 
 pkgname=arduino-language-server-git
-pkgver=1.0.0
+pkgver=r239.134ca4d
 pkgrel=1
-epoch=1
 pkgdesc="An Arduino Language Server based on Clangd to Arduino code autocompletion"
-arch=('any')
-makedepends=('git' 'go')
+arch=(x86_64 i686 i486 pentium4 arm armv6h armv7h aarch64)
 url="https://github.com/arduino/arduino-language-server"
-license=('APACHE')
-source=(git+https://github.com/arduino/arduino-language-server)
-sha256sums=('SKIP')
+license=('Apache')
+makedepends=('git' 'go')
 provides=('arduino-language-server')
 conflicts=('arduino-language-server')
+source=(git+https://github.com/arduino/arduino-language-server)
+sha256sums=('SKIP')
 
 pkgver() {
-	cd ${pkgname}
-	git describe --tags | sed "s+-+.r+" | tr - .
+  cd "${pkgname%-git}"
+  ( set -o pipefail
+    git describe --long 2>/dev/null | sed 's/\([^-]*-g\)/r\1/;s/-/./g' ||
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  )
 }
 
 build() {
-	cd ${pkgname}
-
-	msg2 'Building...'
-	go build
+  cd "${pkgname%-git}"
+  go build \
+    -trimpath \
+    -buildmode=pie \
+    -mod=readonly \
+    -modcacherw \
+    -ldflags "-linkmode external -extldflags \"${LDFLAGS}\"" \
+    .
 }
 
 package() {
-	cd ${pkgname}
-
-	msg2 'Installing executables...'
-	install -Dm 755 arduino-language-server -t "$pkgdir"/usr/bin
-
-	msg2 'Cleaning up pkgdir...'
-	find "$pkgdir" -type d -name .git -exec rm -r '{}' +
+  cd "${pkgname%-git}"
+  install -Dm 755 arduino-language-server -t "$pkgdir"/usr/bin
 }
